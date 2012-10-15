@@ -26,13 +26,16 @@ maxlist([X],X).
 maxlist([X|Xs],X):- max(Xs,Y), X >=Y.
 maxlist([X|Xs],N):- max(Xs,N), N > X.
 
+%permet de récupérer la position dans la liste à partir de X,Y.
 index(X,Y,Pos):-
   Pos is 7*Y + X.
- 
+
+%permet de récupérer X,Y à partir de l'index de la liste.
 rindex(X,Y,Pos):-
   X is Pos mod 7,
   Y is Pos // 7.
 
+%renvoie la couleur du jeton en X,Y; et -1 si en dehors du tableau.
 value(T,[X,Y],-1):-
 	X < 0;
 	X >= 7;
@@ -41,7 +44,8 @@ value(T,[X,Y],-1):-
 
 value(T,[X,Y],Val):-
 	index(X,Y,Pos), nth0(Pos,T,Val).
-	
+
+%renvoie la position en Y de la 1ère case vide dans la colone Column.
 firstFree(T,Column,ResultY):-
 	firstFree1(T,Column,0,ResultY).
 	
@@ -53,6 +57,7 @@ firstFree1(T,Column,Y,ResultY):-
 
 colJouables(_,[],-1):- !.
 	
+%renvoie la liste des colones (X) dans lesquelles il est encore possible de jouer.
 colJouables(T,[TL|QL],Col):-
 	Col2 is Col-1,
 	firstFree(T,Col,Y),
@@ -66,9 +71,11 @@ colJouables(T,QL,Col):-
 	Y >= 6,
 	colJouables(T,QL,Col2).
 
+%insère un jeton de la couleur Player dans la colonne Column. renvoie également la position en Y du jeton inséré.
 insert(T,Column,Player,ResultTable,Y):-
 	firstFree(T,Column,Y), index(Column,Y,Pos), replace(T,Pos,Player,ResultTable).
 
+%compte le nombre de jetons de la couleur Player, à partir de la position X,Y et dans la direction Vx,Vy.
 nbjetons(T, [X,Y], [Vx, Vy], Player, Nb):-
 	X2 is X + Vx, Y2 is Y + Vy,
 	value(T, [X2, Y2], Player2),
@@ -81,7 +88,7 @@ nbjetons(T, [X,Y], [Vx, Vy], Player, Nb):-
 	Player2 == Player,
 	nbjetons(T, [X2, Y2], [Vx, Vy], Player, Nbsuite),
 	Nb is 1 + Nbsuite.
-	
+
 victory1(T,[X,Y], [Vx, Vy]):- 
 	value(T,[X,Y],Player), 
 	nbjetons(T, [X,Y], [Vx, Vy], Player, Nba), 
@@ -90,6 +97,7 @@ victory1(T,[X,Y], [Vx, Vy]):-
 	Nbtot is Nba + Nbb,
 	Nbtot >= 3.
 
+%teste si le jeton inséré en X,Y crée un alignement de 4 (et donc la victoire du joueur l'ayant posé)
 victory(T, [X,Y]) :-
 	victory1(T,[X,Y], [1, 0]);
 	victory1(T,[X,Y], [1, 1]);
@@ -141,7 +149,8 @@ tick1J(T, Player, [_,_]):-
 %%%%%%%%%%%%%%%%%% MIN
 min(T,Val,0,-1):-
 	heuristique(T,Val).
-	
+
+% choisit la valeur minimum renvoyée par ses fils (Val) et renvoie la Colone correspondante.
 min(T,Val,Acc,Col):-
 	Acc > 0,
 	Acc2 is Acc-1,
@@ -149,13 +158,15 @@ min(T,Val,Acc,Col):-
 	min1(T,LCoups,Acc2,Val,Col).
 	
 min1(_,[],_,999999999,-1).
-	
+
+%permet l'appel aux 0..7 fils de min et la récupération de la branche minimisant l'heuristique.
 min1(T,[MoveT|MoveQ],Acc2,MinVal,MinIndex):-
 	insert(T,MoveT,1,T2,_),
 	max(T2,Val1,Acc2,_),
 	min1(T,MoveQ,Acc2,Val2,MinIndex2),
 	compareMin(MoveT,Val1,MinIndex2,Val2,MinIndex,MinVal).
-	
+
+%permet de comparer V1 et V2, et de récupérer l'index du minimum.
 compareMin(I1,V1,I2,V2,I1,V1):-
 	V1=<V2.
 	
@@ -165,7 +176,8 @@ compareMin(I1,V1,I2,V2,I2,V2):-
 %%%%%%%%%%%%%%%%%% MAX
 max(T,Val,0,-1):-
 	heuristique(T,Val).
-	
+
+% choisit la valeur maximum renvoyée par ses fils (Val) et renvoie la Colone correspondante.
 max(T,Val,Acc,Col):-
 	Acc > 0,
 	Acc2 is Acc-1,
@@ -173,13 +185,15 @@ max(T,Val,Acc,Col):-
 	max1(T,LCoups,Acc2,Val,Col).
 	
 max1(_,[],_,-999999999,-1).
-	
+
+%permet l'appel aux 0..7 fils de min et la récupération de la branche maximisant l'heuristique.
 max1(T,[MoveT|MoveQ],Acc2,MaxVal,MaxIndex):-
 	insert(T,MoveT,2,T2,_),
 	min(T2,Val1,Acc2,_),
 	max1(T,MoveQ,Acc2,Val2,MaxIndex2),
 	compareMax(MoveT,Val1,MaxIndex2,Val2,MaxIndex,MaxVal).
-	
+
+%permet de comparer V1 et V2, et de récupérer l'index du maximum.
 compareMax(I1,V1,I2,V2,I1,V1):-
 	V1>=V2.
 	
@@ -187,13 +201,16 @@ compareMax(I1,V1,I2,V2,I2,V2):-
 	V1<V2.
 	
 
-%%%%%%%%%%%%%%%%%%%%%% HEURISTIQUE %%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%% HEURISTIQUE SIMPLE %%%%%%%%%%%%%%%%%%%%%%%%
+
+%valeur des alignements. Un alignement de 4 compte comme une alignement de 4 + un alignement de 3 + un alignement de 2.
 nbJetonsToVal(0, 0).   % 1 jetons alignes => 0 points
 nbJetonsToVal(1, 1).   % 2 => 1
 nbJetonsToVal(2, 19).  % 3 => 20
 nbJetonsToVal(3, 980). % 4 => 1000.
 nbJetonsToVal(N, 980):- N>=4.
 
+%calcule la valeur des alignements à partir de X,Y dans 4 des 8 directions disponibles.
 heuristiqueCase(T, [X,Y], Val, PlayerVoulu):-
 	value(T,[X,Y],Player), 
 	Player \== PlayerVoulu,
@@ -213,7 +230,8 @@ heuristique(T,Val):-
 	Val is SumMax - SumMin.
 
 heuristique1(_,-1,0,0).
-	
+
+%évalue une situation de jeu, si >0 avantage à Max, si <0 avantage à Min.
 heuristique1(T,Pos,SumMin,SumMax):-
 	Pos >= 0,
 	PosNext is Pos-1,
