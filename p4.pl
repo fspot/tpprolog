@@ -43,6 +43,10 @@ value(T,[X,Y],-1):-
 	Y >= 6.
 
 value(T,[X,Y],Val):-
+	X >= 0,
+	X < 7,
+	Y >= 0,
+	Y < 6,
 	index(X,Y,Pos), nth0(Pos,T,Val).
 
 %renvoie la position en Y de la 1ère case vide dans la colone Column.
@@ -110,7 +114,8 @@ tick2J(T, Player, [X,Y]):-
 	V \== 0,
 	victory(T,[X,Y]),
 	afficher(T),
-	write('victoire du joueur '), write(Player), write(' !\n').
+	Player2 is 3-Player,
+	write('victoire du joueur '), write(Player2), write(' !\n').
 	
 tick2J(T, Player, [_,_]):-
 	afficher(T),
@@ -126,7 +131,8 @@ tick1J(T, Player, [X,Y]):-
 	V \== 0,
 	victory(T,[X,Y]),
 	afficher(T),
-	write('victoire du joueur '), write(Player), write(' !\n').
+	Player2 is 3-Player,
+	write('victoire du joueur '), write(Player2), write(' !\n').
 	
 tick1J(T, Player, [_,_]):-
 	Player == 1,
@@ -140,7 +146,7 @@ tick1J(T, Player, [_,_]):-
 tick1J(T, Player, [_,_]):-
 	Player == 2,
 	afficher(T),
-	max(T,_,3,Col),
+	max(T,_,4,Col),
 	insert(T, Col, Player, T2, Height),
 	Player2 is 3-Player,
 	tick1J(T2, Player2, [Col,Height]).
@@ -158,6 +164,11 @@ min(T,Val,Acc,Col):-
 	min1(T,LCoups,Acc2,Val,Col).
 	
 min1(_,[],_,999999999,-1).
+
+min1(T,[MoveT|MoveQ],Acc2,-99999,MoveT):-
+	insert(T,MoveT,1,T2,Y),
+	victory(T2,[MoveT,Y]), !.
+	
 
 %permet l'appel aux 0..7 fils de min et la récupération de la branche minimisant l'heuristique.
 min1(T,[MoveT|MoveQ],Acc2,MinVal,MinIndex):-
@@ -186,6 +197,10 @@ max(T,Val,Acc,Col):-
 	
 max1(_,[],_,-999999999,-1).
 
+max1(T,[MoveT|MoveQ],Acc2,99999,MoveT):-
+	insert(T,MoveT,2,T2,Y),
+	victory(T2,[MoveT,Y]), !.
+
 %permet l'appel aux 0..7 fils de min et la récupération de la branche maximisant l'heuristique.
 max1(T,[MoveT|MoveQ],Acc2,MaxVal,MaxIndex):-
 	insert(T,MoveT,2,T2,_),
@@ -204,11 +219,16 @@ compareMax(I1,V1,I2,V2,I2,V2):-
 %%%%%%%%%%%%%%%%%%%%%% HEURISTIQUE SIMPLE %%%%%%%%%%%%%%%%%%%%%%%%
 
 %valeur des alignements. Un alignement de 4 compte comme une alignement de 4 + un alignement de 3 + un alignement de 2.
+%nbJetonsToVal(0, 0).   % 1 jetons alignes => 0 points
+%nbJetonsToVal(1, 1).   % 2 => 1
+%nbJetonsToVal(2, 19).  % 3 => 20
+%nbJetonsToVal(3, 980). % 4 => 1000.
+%nbJetonsToVal(N, 980):- N>=4.
+
 nbJetonsToVal(0, 0).   % 1 jetons alignes => 0 points
 nbJetonsToVal(1, 1).   % 2 => 1
-nbJetonsToVal(2, 19).  % 3 => 20
-nbJetonsToVal(3, 980). % 4 => 1000.
-nbJetonsToVal(N, 980):- N>=4.
+nbJetonsToVal(2, 400).  % 3 => 20
+nbJetonsToVal(N, 980):- N>=3.
 
 %calcule la valeur des alignements à partir de X,Y dans 4 des 8 directions disponibles.
 heuristiqueCase(T, [X,Y], Val, PlayerVoulu):-
@@ -241,7 +261,11 @@ heuristique1(T,Pos,SumMin,SumMax):-
 	heuristiqueCase(T,[X,Y],ValP2,2),
 	SumMin is SumMin2+ValP1,
 	SumMax is SumMax2+ValP2.
-	
+
+%%%%%%%%%%%%%%%%%%%%%% HEURISTIQUE AVANCE %%%%%%%%%%%%%%%%%%%%%%%%
+heuristiqueAv(T,Val):-
+	heuristique2(T,41,SumMin,SumMax),
+	Val is SumMax - SumMin.
 
 %%%%%%%%%%%%%%%%%%%%%%% START %%%%%%%%%%%%%%%%%%%%%%	
 start2J:-
